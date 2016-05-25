@@ -1,3 +1,5 @@
+#define TEMP_MAX 28
+
 //Wifi library
 #include <SPI.h>
 #include <WiFi.h>
@@ -6,21 +8,21 @@
 #include <Wire.h>
 #include "rgb_lcd.h"
 
+//Wifi Init parameters
 WiFiClient client;
 char ssid[] = "wireless-uem";     // your network SSID (name) 
 int status = WL_IDLE_STATUS;
-char FIWARE_SERVER[] = "10.34.81.33";
+char FIWARE_SERVER[] = "10.34.81.33";	//url = "10.34.81.33:3000/sendData"
 int FIWARE_PORT = 3000;
-//url = "10.34.81.33:3000/sendData"
 
-
+//LCD Init parameters
 rgb_lcd lcd;
 
 int colorR = 255;
 int colorG = 0;
 int colorB = 0;
 
-
+int temp_led = 2;
 
 // Define the pin to which the temperature sensor is connected.
 const int pinTemp = A0;
@@ -30,7 +32,7 @@ const int pinTemp = A0;
 const int B = 3975;
 
 // Defines the pins to which the light sensor and LED are connected.
-const int pinLight = A0;
+const int pinLight = A1;
 
 void setup()
 {
@@ -41,7 +43,7 @@ void setup()
 		status = WiFi.begin(ssid);
 
 		// Wait 10 seconds for connection:
-		delay(10000);
+		delay(5000);
 	}
 	
 	Serial.println("Connected to wifi");
@@ -53,9 +55,11 @@ void setup()
 	 //Print a message to the LCD.
 	lcd.print("Temperatura:");
 
+	pinMode(temp_led, OUTPUT);
+
 	Serial.begin(115200);
 
-	delay(1000);
+	delay(500);
 }
 
 void loop()
@@ -70,6 +74,11 @@ void loop()
 	// Calculate the temperature based on the resistance value.
 	float temperature = 1 / (log(resistance / 10000) / B + 1 / 298.15) - 273.15;
 
+	if (temperature > TEMP_MAX)
+		digitalWrite(temp_led, HIGH);
+	else
+		digitalWrite(temp_led, LOW);
+
 	// set the cursor to column 0, line 1
 	// (note: line 1 is the second row, since counting begins with 0):
 	lcd.setCursor(0, 1);
@@ -80,7 +89,7 @@ void loop()
 	
 	//Serial.println(temperature);
 
-	delay(10000);
+	delay(500);
 }
 
 void postMeasures(long light, long temp)
@@ -97,29 +106,22 @@ void postMeasures(long light, long temp)
 	body += "-3.933538";
 	body += ",\"timeInstant\":\"21/04/2016 16:00:45\"}";
 
-	while (!client.connected())
-	{
 		if (client.connect(FIWARE_SERVER, FIWARE_PORT))
+		{
 			Serial.println("connected to server");
 
+			// Make a HTTP request:
+			client.println("POST /SendData HTTP/1.1");
+			client.println("Host:" + String(FIWARE_SERVER) + ":" + String(FIWARE_PORT));
+			client.println("Content-Type: application/json");
+			client.println("Content-Length: " + String(body.length()));
+			client.println("Connection: close");
+			client.println();
+			client.println(body);
+			Serial.println(body);
+
+			client.stop();
+		}
 		else
 			Serial.println("ERROR");
-
-		delay(1000);
-	}
-
-	// Make a HTTP request:
-	client.println("POST /SendData HTTP/1.1");
-	client.println("Host:" + String(FIWARE_SERVER) + ":" + String(FIWARE_PORT));
-	client.println("Content-Type: application/json");
-	client.println("Content-Length: " + String(body.length()));
-	client.println("Connection: close");
-	client.println();
-	client.println(body);
-	Serial.println(body);
-
-
-	client.stop();
-	
-	Serial.println("Done");
 }
