@@ -1,3 +1,4 @@
 # Hackaton
 Hackaton Intel UEM
-refd
+
+Visual Micro program for Smart Cities on Intel Edison Board.
