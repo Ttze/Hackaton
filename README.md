@@ -1,5 +1,5 @@
-# Hackaton
-Hackaton Intel UEM
+# Hackathon
+Hackathon Movilforum UEM 2016
 
 Visual Micro program for Smart Cities on Intel Edison Board.
 
